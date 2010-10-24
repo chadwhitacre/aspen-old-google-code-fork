@@ -1,0 +1,5 @@
+make it so /n/ != /n
+change default handlers to stdlib simplates
+write a simplate flavor using webob and tornado-style templating
+    make this the only flavor of simplates (1 vs. infinity)
+make aspen non-blocking (tornado? diesel? etc.?)
