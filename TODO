@@ -1,5 +1,14 @@
-make it so /n/ != /n
-change default handlers to stdlib simplates
 write a simplate flavor using webob and tornado-style templating
     make this the only flavor of simplates (1 vs. infinity)
+move magic dir from __ to .aspen
+    don't serve hidden files
+simplify extension points
+    no more apps
+    no more handlers--everything runs through Simplates
+    keep middleware around, I think
+    keep urlmap around, definitely (but rename?)
+===POSTPONED===
 make aspen non-blocking (tornado? diesel? etc.?)
+===DONE===
+make it so /n/ != /n
+change default handlers to stdlib simplates
