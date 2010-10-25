@@ -46,11 +46,9 @@ class Website(object):
             start_response('404 Not Found', [])
             return ['Resource not found.']
         environ['PATH_TRANSLATED'] = fspath
-
-
+        fspath = find_default(self.configuration.defaults, fspath)
         if os.path.isdir(fspath):
             return autoindex.wsgi(environ, start_response)
-
         response = check_trailing_slash(environ, start_response)
         if response is not None: # redirect
             return response
@@ -59,8 +57,6 @@ class Website(object):
         # Load a simplate.
         # ================
 
-        fspath = find_default(self.configuration.defaults, fspath)
-        environ['PATH_TRANSLATED'] = fspath
         simplate = simplates.load(fspath)
         mimetype, namespace, script, template = simplate
        
