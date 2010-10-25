@@ -1,5 +1,6 @@
 """Simplates
 """
+import logging
 import mimetypes
 import os
 from os.path import exists, isfile
@@ -16,6 +17,7 @@ from jinja2 import Template
 
 FORM_FEED = chr(12) # == '\x0c', ^L, ASCII page break
 ENCODING = 'UTF-8'
+log = logging.getLogger('aspen.simplates')
 
 
 class LoadError(StandardError):
@@ -79,8 +81,12 @@ def load_uncached(fspath):
     mimetype = mimetypes.guess_type(fspath, 'text/plain')[0]
     if mimetype is None:
         mimetype = 'application/octet-stream'
+    log.debug('inferred mimetype ' + mimetype)
     if not mimetype.startswith('text/'):
-        if FORM_FEED not in simplate:
+        if simplate.count(FORM_FEED) not in [1,2]:
+            # XXX: This can still give us a false positive, if a binary fail
+            # has one or two form feeds in it. The assumption here is that a 
+            # binary file with one or two form feeds will have even more.
             return (mimetype, None, None, simplate) # static file; exit early
 
     simplate = simplate.decode(ENCODING)
