@@ -6,9 +6,9 @@ import sys
 import traceback
 
 import aspen
-from aspen import restarter
+from aspen import restarter 
 from aspen.website import Website
-from aspen.wsgiserver import CherryPyWSGIServer as BaseServer
+from aspen.vendor.wsgiserver import CherryPyWSGIServer as BaseServer
 
 
 log = logging.getLogger('aspen.server')
@@ -25,7 +25,7 @@ class Server(BaseServer):
         self.version = "Aspen/%s" % aspen.__version__
 
         website = Website(self)
-        for middleware in configuration.middleware:
+        for middleware in configuration.load_middleware():
             website = middleware(website)
         self.website = website
 
@@ -49,9 +49,7 @@ class Server(BaseServer):
             log.info("configuring filesystem monitor")
             __ = self.configuration.paths.__
             if __:
-                for path in ( os.path.join(__, 'etc', 'apps.conf')
-                            , os.path.join(__, 'etc', 'aspen.conf')
-                            , os.path.join(__, 'etc', 'handlers.conf')
+                for path in ( os.path.join(__, 'etc', 'aspen.conf')
                             , os.path.join(__, 'etc', 'logging.conf')
                             , os.path.join(__, 'etc', 'middleware.conf')
                              ):

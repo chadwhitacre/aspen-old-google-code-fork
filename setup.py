@@ -24,7 +24,6 @@ setup( name = 'aspen'
      , version = '~~VERSION~~'
      #, package_dir = {'':''}
      , packages = [ 'aspen'
-                  , 'aspen.apps'
                   , 'aspen.handlers'
                   , 'aspen.handlers.simplates'
                   , 'aspen.ipc'
@@ -34,6 +33,10 @@ setup( name = 'aspen'
      , description = 'Aspen is a highly extensible Python webserver.'
      , author = 'Chad Whitacre'
      , author_email = 'chad@zetaweb.com'
-     , url = 'http://www.zetadev.com/software/aspen/'
+     , url = 'http://aspen.io/'
      , classifiers = classifiers
-      )
+     , install_requires=[
+        'webob == 1.0',
+        'jinja2 == 2.5.5'
+    ],
+)
