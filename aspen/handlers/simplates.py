@@ -10,14 +10,12 @@ import threading
 import traceback
 import sys
 
-import util
-from jinja2 import Environment, FileSystemLoader, Template
+from aspen import mode
+from jinja2 import Template
 
 
 FORM_FEED = chr(12) # == '\x0c', ^L, ASCII page break
 ENCODING = 'UTF-8'
-MODE_STPROD = True 
-MODE_DEBUG = False
 
 
 class LoadError(StandardError):
@@ -59,7 +57,7 @@ __locks = Locks()       # access controls for __cache
 # Core loader
 # ===========
 
-def load_simplate_uncached(fspath):
+def load_uncached(fspath):
     """Given a filesystem path, return three objects (uncached).
 
     A simplate is a template with two optional Python components at the head of
@@ -136,7 +134,7 @@ def load_simplate_uncached(fspath):
 # Cache wrapper
 # =============
 
-def load_simplate_cached(fspath):
+def load_cached(fspath):
     """Given a filesystem path, return three objects (with caching).
     """
 
@@ -203,7 +201,7 @@ def load_simplate_cached(fspath):
                 raise entry.exc
         else:                                                   # cache miss
             try:
-                entry.quadruple = load_simplate_uncached(fspath)
+                entry.quadruple = load_uncached(fspath)
                 entry.exc = None
             except Exception, exception:
                 # NB: Old-style string exceptions will still raise.
@@ -237,3 +235,11 @@ def load_simplate_cached(fspath):
         namespace = namespace.copy()
     return (mimetype, namespace, script, template)
 
+
+# Main callable.
+# ==============
+
+if mode.STPROD:
+    load = load_cached
+else:
+    load = load_uncached

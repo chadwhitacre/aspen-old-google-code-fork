@@ -24,7 +24,7 @@ from logging import StreamHandler
 from logging.handlers import TimedRotatingFileHandler
 
 import aspen
-from aspen import load, mode
+from aspen import mode
 from aspen.ipc.pidfile import PIDFile
 
 log = logging.getLogger('aspen') # configured below; not used until then
@@ -403,7 +403,7 @@ class ConfFile(ConfigParser.RawConfigParser):
             yield self[k]
 
 
-class Configuration(load.Mixin):
+class Configuration(object):
     """Aggregate configuration from several sources.
     """
 
@@ -663,3 +663,48 @@ class Configuration(load.Mixin):
         root_logger.addHandler(handler)
         root_logger.setLevel(level) # bah
 
+
+    # Middleware
+    # ==========
+
+    def load_middleware(self):
+        """Return a list of middleware callables in reverse order.
+        """
+
+        # Find a config file to parse.
+        # ============================
+
+        default_stack = []
+
+        try:
+            if self.paths.__ is None:
+                raise NotImplementedError
+            path = os.path.join(self.paths.__, 'etc', 'middleware.conf')
+            if not os.path.isfile(path):
+                raise NotImplementedError
+        except NotImplementedError:
+            log.info("No middleware configured.")
+            return default_stack
+
+
+        # We have a config file; proceed.
+        # ===============================
+
+        fp = open(path)
+        lineno = 0
+        stack = []
+
+        for line in fp:
+            lineno += 1
+            name = clean(line)
+            if not name:                            # blank line
+                continue
+            else:                                   # specification
+                obj = colon.colonize(name, fp.name, lineno)
+                if not callable(obj):
+                    msg = "'%s' is not callable" % name
+                    raise MiddlewareConfError(msg, lineno)
+                stack.append(obj)
+
+        stack.reverse()
+        return stack

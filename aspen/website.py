@@ -3,22 +3,24 @@ import os
 import sys
 
 import aspen
+import webob
 from aspen import mode
+from aspen.handlers import autoindex, simplates
 from aspen.exceptions import HandlerError
 from aspen.utils import check_trailing_slash, find_default, translate
+from jinja2 import Environment, FileSystemLoader
 
 
 log = logging.getLogger('aspen.website')
 
 
 class Website(object):
-    """Represent a publication, application, or hybrid website.
+    """Represent a website.
     """
 
     def __init__(self, server):
         self.server = server
         self.configuration = server.configuration
-        self.configuration.load_plugins() # user modules imported here
         self.root = self.configuration.paths.root
 
 
@@ -29,6 +31,9 @@ class Website(object):
         """Main WSGI callable.
         """
 
+        request = webob.Request(environ)
+
+
         # Translate the request to the filesystem.
         # ========================================
 
@@ -37,100 +42,111 @@ class Website(object):
         if self.configuration.paths.__ is not None:
             if fspath.startswith(self.configuration.paths.__):  # magic dir
                 hide = True
-        if os.path.basename(fspath) == 'README.aspen':          # README.aspen
-            hide = True
         if hide:
             start_response('404 Not Found', [])
             return ['Resource not found.']
         environ['PATH_TRANSLATED'] = fspath
 
 
-        # Dispatch to an app.
-        # ===================
+        if os.path.isdir(fspath):
+            return autoindex.wsgi(environ, start_response)
 
-        app = self.get_app(environ, start_response) # 301
-        if isinstance(app, list):                           # want redirection
-            response = app
-        elif app is not None:                               # have app
-            response = app(environ, start_response) # WSGI
-        elif not os.path.exists(fspath):                    # 404 NOT FOUND
-            start_response('404 Not Found', [])
-            response = ['Resource not found.']
+        response = check_trailing_slash(environ, start_response)
+        if response is not None: # redirect
+            return response
 
 
-        # Dispatch to a handler.
-        # ======================
+        # Load a simplate.
+        # ================
 
-        else:                                               # handler
-            response = check_trailing_slash(environ, start_response)
-            if response is None: # no redirection
-                fspath = find_default(self.configuration.defaults, fspath)
-                environ['PATH_TRANSLATED'] = fspath
-                handler = self.get_handler(fspath)
-                response = handler.handle(environ, start_response) # WSGI
-
-        return response
-
-
-    # Plugin Retrievers
-    # =================
-    # Unlike the middleware stack, apps and handlers need to be located
-    # per-request.
-
-    def get_app(self, environ, start_response):
-        """Given a WSGI environ, return the first matching app.
-        """
-
-        app = None
-        path = match_against = environ['PATH_INFO']
-        if not match_against.endswith('/'):
-            match_against += '/'
-
-        for app_urlpath, _app in self.configuration.apps:
-
-            # Do basic validation.
-            # ====================
-
-            if not match_against.startswith(app_urlpath):
-                continue
-            environ['PATH_TRANSLATED'] = translate(self.root, app_urlpath)
-            if not os.path.isdir(environ['PATH_TRANSLATED']):
-                start_response('404 Not Found', [])
-                return ['Resource not found.']
-
-
-            # Check trailing slash.
+        fspath = find_default(self.configuration.defaults, fspath)
+        environ['PATH_TRANSLATED'] = fspath
+        simplate = simplates.load(fspath)
+        mimetype, namespace, script, template = simplate
+       
+    
+        # Get a response.
+        # ===============
+    
+        if namespace is None:
+            log.debug('serving as a static file')
+            response = webob.Response(template)
+        else:
+            log.debug('processing simplate')
+            response = webob.Response()
+    
+           
+            # Add auth abstractions to request.
+            # =================================
+    
+            #log.debug('adding auth abstractions')
+            #user = None
+            #key = request.cookies.get('key')
+            #if key is not None:
+            #    log.debug('authenticating user %s' % key)
+            #    user = nest.db.users.find_one({'key':key})
+            #request.user = user
+    
+    
+            # Populate namespace.
+            # ===================
+        
+            namespace['request'] = request
+            namespace['response'] = response
+       
+    
+            # Exec the script.
+            # ================
+        
+            log.debug('executing the script')
+            if script:
+                try:
+                    exec script in namespace
+                except SystemExit, exc:
+                    if len(exc.args) > 0:
+                        response = exc.args[0]
+        
+        
+            # Process the template.
             # =====================
-
-            if app_urlpath.endswith('/'): # "please canonicalize"
-                if path == app_urlpath[:-1]:
-                    response = check_trailing_slash(environ, start_response)
-                    assert response is not None # sanity check
-                    return response # redirect to trailing slash
-                app_urlpath = app_urlpath[:-1] # trailing slash goes in
-                                               # PATH_INFO, not SCRIPT_NAME
-
-            # Update environ.
-            # ===============
-
-            environ["SCRIPT_NAME"] = app_urlpath
-            environ["PATH_INFO"] = path[len(app_urlpath):]
-
-            app = _app
-            break
-
-        if app is None:
-            log.debug("No app found for '%s'" % environ['PATH_INFO'])
-
-        return app
+            # If template is None that means that that section was empty.
+            #
+            # For this and the next step, we allow the user to override us by
+            # setting skip_{template,mimetype} on the response object. We then
+            # use getattr to access each attribute, because, in the default
+            # case, the attribute will not exist (that is, it's not part of the
+            # WebOb class).
+        
+            if not getattr(response, 'skip_template', False):   # skip_template
+                if template is not None:
+                    log.debug('processing the template')
+                    tpl = os.path.join(aspen.paths.root, '__', 'tpl')
+                    loader = FileSystemLoader([tpl])
+                    template.environment.loader = loader
+                    if aspen.mode.STPROD:
+                        response.app_iter = template.generate(namespace)
+                    else:
+                        # errors break chunked encoding with generator?
+                        response.unicode_body = template.render(namespace)
 
 
-    def get_handler(self, pathname):
-        """Given a full pathname, return the first matching handler.
-        """
-        for handler in self.configuration.handlers:
-            if handler.match(pathname):
-                return handler
+        # Set the mimetype.
+        # =================
+        # Note that we guess based on the filesystem path, not the URL path.
+        
+        if not getattr(response, 'skip_mimetype', False):       # skip_mimetype
+            log.debug('setting the mimetype')
+            if mimetype.startswith('text/'):
+                mimetype += "; charset=UTF-8"
+            if 'Content-Type' in response.headers:
+                del response.headers['Content-Type']
+            response.headers['Content-Type'] = mimetype
+            log.debug('mimetype set to %s' % mimetype)
+ 
 
-        log.warn("No handler found for filesystem path '%s'" % pathname)
-        raise HandlerError("No handler found.")
+        # Return.
+        # =======
+    
+        log.debug('made it!')
+        log.debug('')
+        return response(environ, start_response)

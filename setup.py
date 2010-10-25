@@ -37,5 +37,6 @@ setup( name = 'aspen'
      , classifiers = classifiers
      , install_requires=[
         'webob == 1.0',
+        'jinja2 == 2.5.5'
     ],
 )
