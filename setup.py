@@ -1,7 +1,4 @@
-try:
-    from setuptools import setup
-except:
-    from distutils.core import setup
+from setuptools import find_packages, setup
 
 
 classifiers = [
@@ -22,13 +19,7 @@ classifiers = [
 
 setup( name = 'aspen'
      , version = '~~VERSION~~'
-     #, package_dir = {'':''}
-     , packages = [ 'aspen'
-                  , 'aspen.handlers'
-                  , 'aspen.handlers.simplates'
-                  , 'aspen.ipc'
-                  , 'aspen.middleware'
-                   ]
+     , packages = find_packages('.') 
      , scripts = ['bin/aspen', 'bin/aspen.mod_wsgi']
      , description = 'Aspen is a highly extensible Python webserver.'
      , author = 'Chad Whitacre'
