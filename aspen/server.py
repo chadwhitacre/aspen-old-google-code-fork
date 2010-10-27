@@ -6,6 +6,7 @@ import sys
 import traceback
 
 import aspen
+import aspen.middleware
 from aspen import restarter 
 from aspen.website import Website
 from aspen.vendor.wsgiserver import CherryPyWSGIServer as BaseServer
@@ -25,7 +26,7 @@ class Server(BaseServer):
         self.version = "Aspen/%s" % aspen.__version__
 
         website = Website(self)
-        for middleware in configuration.load_middleware():
+        for middleware in aspen.middleware.load(configuration.paths.root):
             website = middleware(website)
         self.website = website
 

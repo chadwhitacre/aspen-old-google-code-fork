@@ -1,6 +1,9 @@
+default middleware: raised and urlmap
+    explicit middleware.conf should replace, not extend
 replace jinja2 with tornado templating
 move magic dir from __ to .aspen
     don't serve hidden files
+bring back tests
 ===POSTPONED===
 make aspen non-blocking (tornado? diesel? etc.?)
 ===DONE===

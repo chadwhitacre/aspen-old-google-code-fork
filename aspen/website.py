@@ -37,14 +37,17 @@ class Website(object):
         # Translate the request to the filesystem.
         # ========================================
 
+        def http404():
+            start_response('404 Not Found', [])
+            return ['Resource not found.']
+        
         hide = False
         fspath = translate(self.root, environ['PATH_INFO'])
         if self.configuration.paths.__ is not None:
             if fspath.startswith(self.configuration.paths.__):  # magic dir
                 hide = True
         if hide:
-            start_response('404 Not Found', [])
-            return ['Resource not found.']
+            return http404()
         environ['PATH_TRANSLATED'] = fspath
         fspath = find_default(self.configuration.defaults, fspath)
         if os.path.isdir(fspath):
@@ -52,6 +55,8 @@ class Website(object):
         response = check_trailing_slash(environ, start_response)
         if response is not None: # redirect
             return response
+        if not os.path.isfile(fspath):
+            return http404()
 
 
         # Load a simplate.
@@ -65,11 +70,12 @@ class Website(object):
         # ===============
     
         if namespace is None:
-            log.debug('serving as a static file')
+            log.debug('serving as a static file (not a simplate)')
             response = webob.Response(template)
         else:
-            log.debug('processing simplate')
+            log.debug('serving as a simplate (not a static file)')
             response = webob.Response()
+            response.content_type = '' # we set this later if still empty
     
            
             # Add auth abstractions to request.
@@ -106,31 +112,24 @@ class Website(object):
             # Process the template.
             # =====================
             # If template is None that means that that section was empty.
-            #
-            # For this and the next step, we allow the user to override us by
-            # setting skip_{template,mimetype} on the response object. We then
-            # use getattr to access each attribute, because, in the default
-            # case, the attribute will not exist (that is, it's not part of the
-            # WebOb class).
         
-            if not getattr(response, 'skip_template', False):   # skip_template
-                if template is not None:
-                    log.debug('processing the template')
-                    tpl = os.path.join(aspen.paths.root, '__', 'tpl')
-                    loader = FileSystemLoader([tpl])
-                    template.environment.loader = loader
-                    if aspen.mode.STPROD:
-                        response.app_iter = template.generate(namespace)
-                    else:
-                        # errors break chunked encoding with generator?
-                        response.unicode_body = template.render(namespace)
+            if template is not None:
+                log.debug('processing the template')
+                tpl = os.path.join(aspen.paths.root, '__', 'tpl')
+                loader = FileSystemLoader([tpl])
+                template.environment.loader = loader
+                if aspen.mode.STPROD:
+                    response.app_iter = template.generate(namespace)
+                else:
+                    # errors break chunked encoding with generator?
+                    response.unicode_body = template.render(namespace)
 
 
         # Set the mimetype.
         # =================
         # Note that we guess based on the filesystem path, not the URL path.
         
-        if not getattr(response, 'skip_mimetype', False):       # skip_mimetype
+        if response.content_type == '':
             log.debug('setting the mimetype')
             if mimetype.startswith('text/'):
                 mimetype += "; charset=UTF-8"
@@ -145,4 +144,6 @@ class Website(object):
     
         log.debug('made it!')
         log.debug('')
-        return response(environ, start_response)
+        out = response(environ, start_response)
+        import pdb; pdb.set_trace()
+        return out

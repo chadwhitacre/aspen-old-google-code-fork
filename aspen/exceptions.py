@@ -21,16 +21,6 @@ class ConfigError(AspenError):
         return '%s (%s, line %d)' % opts
     __repr__ = __str__
 
-class AppsConfError(ConfigError):
-    def __init__(self, msg, lineno):
-        filename = join('__', 'etc', 'apps.conf')
-        ConfigError.__init__(self, msg, filename, lineno)
-
-class HandlersConfError(ConfigError):
-    def __init__(self, msg, lineno):
-        filename = join('__', 'etc', 'handlers.conf')
-        ConfigError.__init__(self, msg, filename, lineno)
-
 class MiddlewareConfError(ConfigError):
     def __init__(self, msg, lineno):
         filename = join('__', 'etc', 'middleware.conf')
