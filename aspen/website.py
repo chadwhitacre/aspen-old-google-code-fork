@@ -75,7 +75,7 @@ class Website(object):
         else:
             log.debug('serving as a simplate (not a static file)')
             response = webob.Response()
-            response.content_type = '' # we set this later if still empty
+            response.content_type = '' # will set this later if still empty
     
            
             # Add auth abstractions to request.
@@ -100,15 +100,15 @@ class Website(object):
             # Exec the script.
             # ================
         
-            log.debug('executing the script')
             if script:
+                log.debug('executing the script')
                 try:
                     exec script in namespace
                 except SystemExit, exc:
                     if len(exc.args) > 0:
                         response = exc.args[0]
         
-        
+
             # Process the template.
             # =====================
             # If template is None that means that that section was empty.
@@ -141,9 +141,13 @@ class Website(object):
 
         # Return.
         # =======
+        # I'm embarrased to say that I don't know why I have to call __call__
+        # explicitly in order to support monkey patching it. But this way you
+        # can set response.__call__ to another function from inside a simplate
+        # in order to drop down to pure WSGI. Note that your alternate wsgi
+        # callable will just get two args and not three (no 'self') because you
+        # are monkey patching an instance method, not a class method.
     
         log.debug('made it!')
         log.debug('')
-        out = response(environ, start_response)
-        import pdb; pdb.set_trace()
-        return out
+        return response.__call__(environ, start_response)
