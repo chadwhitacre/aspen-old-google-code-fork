@@ -1,9 +1,11 @@
+import logging
 import os
 
 from aspen import colon
 from aspen.exceptions import MiddlewareConfError
 
 
+console = logging.getLogger('aspen.middleware')
 clean = lambda x: x.split('#',1)[0].strip() # clears comments & whitespace
 
 
@@ -17,7 +19,7 @@ def load(root):
     default_stack = []
     confpath = os.path.join(root, '__', 'etc', 'middleware.conf')
     if not os.path.isfile(confpath):
-        log.info("No middleware configured.")
+        console.info("No middleware configured.")
         return default_stack
 
 

@@ -115,7 +115,7 @@ class Website(object):
         
             if template is not None:
                 log.debug('processing the template')
-                tpl = os.path.join(aspen.paths.root, '__', 'tpl')
+                tpl = os.path.join(aspen.paths.root, '__', 'etc', 'templates')
                 loader = FileSystemLoader([tpl])
                 template.environment.loader = loader
                 if aspen.mode.STPROD:
