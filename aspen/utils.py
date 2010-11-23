@@ -1,7 +1,10 @@
+import datetime
 import inspect
+import math
 import os
 import re
 import string
+import time
 import urllib
 from os.path import isdir, isfile, join, realpath
 
@@ -385,6 +388,283 @@ class WSGIFilter(object):
 
     def filter(self, environ, headers, data):
         raise NotImplementedError
+
+
+# Nice Things
+# ===========
+
+# Date/Time Helpers
+# =================
+
+months = {  1:'January'
+         ,  2:'February'
+         ,  3:'March'
+         ,  4:'April'
+         ,  5:'May'
+         ,  6:'June'
+         ,  7:'July'
+         ,  8:'August'
+         ,  9:'September'
+         , 10:'October'
+         , 11:'November'
+         , 12:'December'
+          }
+
+
+def ts2age(first, second=None):
+    """Given a Unix timestamp or a datetime object, return an age string.
+
+        =========================================== =============== ==========
+        range                                       denomination    example
+        =========================================== =============== ==========
+        0-1 second                                  "just a moment"
+        1-59 seconds                                seconds         13 seconds
+        60 sec - 59 min                             minutes         13 minutes
+        60 min - 23 hrs, 59 min                     hours           13 hours
+        24 hrs - 13 days, 23 hrs, 59 min            days            13 days
+        14 days - 27 days, 23 hrs, 59 min           weeks           3 weeks
+        28 days - 12 months, 31 days, 23 hrs, 59 mn months          6 months
+        1 year -                                    years           1 year
+        =========================================== =============== ==========
+
+    We'll go up to years for now.
+
+    """
+
+    def convert(timestamp):
+        if isinstance(timestamp, datetime.datetime):
+            return time.mktime(timestamp.timetuple())
+        return timestamp
+
+    first = convert(first)
+    if second is None:
+        second = time.time()
+    else:
+        second = convert(second)
+
+
+    # Define some helpful constants.
+    # ==============================
+
+    sec =   1
+    min =  60 * sec
+    hr  =  60 * min
+    day =  24 * hr
+    wk  =   7 * day
+    mn  =   4 * wk
+    yr  = 365 * day
+
+
+    # Get the raw age in seconds.
+    # ===========================
+
+    age = second - first 
+
+
+    # Convert it to a string.
+    # =======================
+    # We start with the coarsest unit and filter to the finest. Pluralization is
+    # centralized.
+
+    if age < 1:
+        return 'just a moment'
+
+    elif age >= yr:         # years
+        amount = age / yr
+        unit = 'year'
+    elif age >= mn:         # months
+        amount = age / mn
+        unit = 'month'
+    elif age >= (2 * wk):   # weeks
+        amount = age / wk
+        unit = 'week'
+    elif age >= day:        # days
+        amount = age / day
+        unit = 'day'
+    elif age >= hr:         # hours
+        amount = age / hr
+        unit = 'hour'
+    elif age >= min:        # minutes
+        amount = age / min
+        unit = 'minute'
+    else:                   # seconds
+        amount = age
+        unit = 'second'
+
+
+    # Pluralize and return.
+    # =====================
+
+    amount = int(math.floor(amount))
+    if amount != 1:
+        unit += 's'
+    age = ' '.join([str(amount), unit])
+    return age
+
+dt2age = ts2age
+
+
+
+def format_date(dt, timeonly=False):
+    """Given a datetime.datetime obj, return a formatted string.
+
+    If timeonly is set, then don't include the date in the string.
+
+    """
+    s = timeonly and "%I:%M %p" or "%B %d, %Y at %I:%M %p"
+    s = dt.strftime(s)
+    s = s.lstrip('0')
+    s = s.replace(' 0', ' ')
+    s = s.replace('.0', '.')
+    return s
+
+
+# http://code.djangoproject.com/svn/django/tags/releases/1.0.2/django/forms/fields.py
+email_re = re.compile(
+ r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*"  # dot-atom
+ r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-011\013\014\016-\177])*"' # quoted-string
+ r')@(?:[A-Z0-9-]+\.)+[A-Z]{2,6}$', re.IGNORECASE)  # domain
+
+
+# States, Territories, Provinces
+# ==============================
+
+class OrderableDict(dict):
+    __module__ == 'nest.util'
+    def ordered(self):
+        return sorted(self.values())
+
+
+states = OrderableDict()
+states['AL'] = ('Alabama', 'AL')
+states['AK'] = ('Alaska', 'AK')
+states['AZ'] = ('Arizona', 'AZ')
+states['AR'] = ('Arkansas', 'AR')
+states['CA'] = ('California', 'CA')
+states['CO'] = ('Colorado', 'CO')
+states['CT'] = ('Connecticut', 'CT')
+states['DE'] = ('Delaware', 'DE')
+states['FL'] = ('Florida', 'FL')
+states['GA'] = ('Georgia', 'GA')
+states['HI'] = ('Hawaii', 'HI')
+states['IA'] = ('Iowa', 'IA')
+states['ID'] = ('Idaho', 'ID')
+states['IL'] = ('Illinois', 'IL')
+states['IN'] = ('Indiana', 'IN')
+states['KS'] = ('Kansas', 'KS')
+states['KY'] = ('Kentucky', 'KY')
+states['LA'] = ('Louisiana', 'LA')
+states['MA'] = ('Massachusetts', 'MA')
+states['MD'] = ('Maryland', 'MD')
+states['ME'] = ('Maine', 'ME')
+states['MI'] = ('Michigan', 'MI')
+states['MN'] = ('Minnesota', 'MN')
+states['MO'] = ('Missouri', 'MO')
+states['MS'] = ('Mississippi', 'MS')
+states['MT'] = ('Montana', 'MT')
+states['NC'] = ('North Carolina', 'NC')
+states['ND'] = ('North Dakota', 'ND')
+states['NE'] = ('Nebraska', 'NE')
+states['NH'] = ('New Hampshire', 'NH')
+states['NJ'] = ('New Jersey', 'NJ')
+states['NM'] = ('New Mexico', 'NM')
+states['NY'] = ('New York', 'NY')
+states['NV'] = ('Nevada', 'NV')
+states['OH'] = ('Ohio', 'OH')
+states['OK'] = ('Oklahoma', 'OK')
+states['OR'] = ('Oregon', 'OR')
+states['PA'] = ('Pennsylvania', 'PA')
+states['RI'] = ('Rhode Island', 'RI')
+states['SC'] = ('South Carolina', 'SC')
+states['SD'] = ('South Dakota', 'SD')
+states['TN'] = ('Tennessee', 'TN')
+states['TX'] = ('Texas', 'TX')
+states['UT'] = ('Utah', 'UT')
+states['VA'] = ('Virginia', 'VA')
+states['VE'] = ('Vermont', 'VE')
+states['WA'] = ('Washington', 'WA')
+states['WI'] = ('Wisconsin', 'WI')
+states['WV'] = ('West Virginia', 'WV')
+states['WY'] = ('Wyoming', 'WY')
+
+territories = OrderableDict()
+territories['PW'] = ('Palau', 'PW')
+territories['VI'] = ('Virgin Islands', 'VI')
+territories['PR'] = ('Puerto Rico', 'PR')
+territories['MP'] = ('Mariana Islands', 'MP')
+territories['MH'] = ('Marshall Islands', 'MH')
+territories['DC'] = ('District of Columbia', 'DC')
+territories['FM'] = ('Micronesia', 'FM')
+territories['GU'] = ('Guam', 'GU')
+territories['AS'] = ('American Samoa', 'AS')
+
+states_and_territories = OrderableDict()
+states_and_territories.update(states)
+states_and_territories.update(territories)
+
+provinces = OrderableDict()
+provinces['AB'] = ('Alberta', 'AB')
+provinces['BC'] = ('British Columbia', 'BC')
+provinces['MB'] = ('Manitoba', 'MB')
+provinces['NB'] = ('New Brunswick', 'NB')
+provinces['NL'] = ('Newfoundland', 'NL')
+provinces['NT'] = ('Northwest Territories', 'NT')
+provinces['NS'] = ('Nova Scotia', 'NS')
+provinces['NU'] = ('Nunavut', 'NU')
+provinces['ON'] = ('Ontario', 'ON')
+provinces['PE'] = ('Prince Edward Island', 'PE')
+provinces['QC'] = ('Quebec', 'QC')
+provinces['SK'] = ('Saskatchewan', 'SK')
+provinces['YT'] = ('Yukon', 'YT')
+
+states_and_territories_and_provinces = OrderableDict()
+states_and_territories_and_provinces.update(states)
+states_and_territories_and_provinces.update(territories)
+states_and_territories_and_provinces.update(provinces)
+
+
+# Helpers for listings
+# ====================
+
+def columnize(items, numcols=3):
+    """Given a sequence, return a None-padded 2D array, sorted down.
+
+    [foo, bar, baz, buz, blee, bloo, blah, blam]
+
+        <becomes>
+
+    [[foo, buz, blah]
+     [bar, blee, blam
+     [baz, bloo, None]]
+
+    """
+    out = []
+    offset = int(math.ceil(len(items)/float(numcols)))
+    for i in range(0, offset):
+        row = []
+        for j in range(i, i+(offset*numcols), offset):
+            cell = None
+            if j < len(items):
+                cell = items[j]
+            row.append(cell)
+        out.append(row)
+    return out
+
+
+def even_odd(sequence):
+    """Given a sequence, yield objects wrapped with even/odd info.
+    """
+    i = 0 
+    for obj in sequence:
+        is_odd = bool(i % 2)
+        is_even = not is_odd
+        yield { 'is_even':is_even
+              , 'is_odd':is_odd
+              , 'even_odd':is_even and 'even' or 'odd'
+              , 'obj':obj
+               }
+        i += 1
+
 
 
 # Test
