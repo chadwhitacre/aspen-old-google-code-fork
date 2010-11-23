@@ -72,6 +72,7 @@ class Website(object):
         if namespace is None:
             log.debug('serving as a static file (not a simplate)')
             response = webob.Response(template)
+            response.content_type = '' # trigger setting later
         else:
             log.debug('serving as a simplate (not a static file)')
             response = webob.Response()
