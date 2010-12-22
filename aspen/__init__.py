@@ -21,7 +21,6 @@ else:
 
 from aspen import mode
 
-# Hack until we unglobalize configuration
 __version__ = '~~VERSION~~'
 
 from aspen._configuration import ConfigurationError, Configuration, usage
@@ -39,9 +38,6 @@ log = logging.getLogger('aspen')
 
 # Global Configuration
 # ====================
-# @@: This should go away. See issue #137:
-#
-#   http://code.google.com/p/aspen/issues/detail?id=137
 
 configuration = None # an aspen._configuration.Configuration instance
 conf = None # an aspen._configuration.ConfFile instance

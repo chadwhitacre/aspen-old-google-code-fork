@@ -9,7 +9,7 @@ import time
 import aspen
 from aspen.ipc import restarter
 from aspen.tests import LOG, Block, assert_logs
-from aspen.tests.fsfix import mk, attach_teardown
+from aspen.tests.fsfix import mk, attach_teardown, torndown
 from nose import SkipTest
 
 
@@ -39,6 +39,8 @@ def test_basic():
 def test_defaults(): # dot junkie
     def assert_(foo):
         assert foo
+    assert_ = torndown(assert_)
+
     yield assert_, restarter.PARENT
     yield assert_, not restarter.CHILD
     yield assert_, not restarter.MONITORING
@@ -83,6 +85,7 @@ def test_retcodes(): # 3 tests
         mk(('aspen-test.py', RETCODE_TEST_PROGRAM % retcode))
         subprocess.call(ARGV)
         assert_logs("restarting", "exiting", force_unix_EOL=True)
+    test = torndown(test)
 
     start_1 = time.time()
     yield test, 75
@@ -202,7 +205,9 @@ def test_filesystem():
                            , "child started"
                            , force_unix_EOL=True
                             )
- 
+
+    test = torndown(test)
+
     yield test, 'foo.py'
     yield test, 'foo.conf', True
 
@@ -257,6 +262,7 @@ def test_signal():
         time.sleep(0.2) # time for log to flush
    
         assert_logs(*expected)
+    test = torndown(test)
 
     expected_parent = ( "parent started"
                       , "child started"

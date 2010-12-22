@@ -84,7 +84,7 @@ def load_uncached(fspath):
     log.debug('inferred mimetype ' + mimetype)
     if not mimetype.startswith('text/'):
         if simplate.count(FORM_FEED) not in [1,2]:
-            # XXX: This can still give us a false positive, if a binary fail
+            # XXX: This can still give us a false positive, if a binary file
             # has one or two form feeds in it. The assumption here is that a 
             # binary file with one or two form feeds will have even more.
             return (mimetype, None, None, simplate) # static file; exit early

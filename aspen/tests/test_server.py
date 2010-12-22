@@ -43,12 +43,17 @@ def test_log():
     set_log_filter('aspen')
     check("http://localhost:8080/", "bar")
     assert_logs( "logging is already configured"
-               , "No apps configured."
-               , "No handlers configured; using defaults."
                , "No middleware configured."
                , "starting on ('0.0.0.0', 8080)"
                , "configuring filesystem monitor"
-               , "No app found for '/'"
+               , "inferred mimetype text/html"
+               , "serving as a simplate (not a static file)"
+               , "executing the script"
+               , "processing the template"
+               , "setting the mimetype"
+               , "mimetype set to text/html; charset=UTF-8"
+               , "made it!"
+               , ""
                , "cleaning up server"
                , force_unix_EOL=True
                 )
@@ -59,17 +64,13 @@ def test_from_aspen_import_config():
     mk( '__/etc'
       , '__/lib/python' 
       , ('__/etc/aspen.conf', '[main]\naddress=:53700\n[my_settings]\nfoo=bar')
-      , ('__/etc/apps.conf', '/ foo:wsgi_app')
-      , ('__/lib/python/foo.py', """\
+      , ('index.html', """\
 import aspen
-
-def wsgi_app(environ, start_response):
-    my_setting = aspen.conf.my_settings.get('foo', 'default')
-    start_response('200 OK', [])
-    return ["My setting is %s" % my_setting]
-""")
+
+my_setting = aspen.conf.my_settings.get('foo', 'default')
+My setting is {{ my_setting }}.""")
        )
-    check("http://localhost:53700/", "My setting is bar")
+    check("http://localhost:53700/", "My setting is bar.")
 
 
 def test_thread_clobbering():

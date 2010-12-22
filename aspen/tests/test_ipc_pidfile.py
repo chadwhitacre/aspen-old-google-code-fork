@@ -4,7 +4,7 @@ import sys
 
 from aspen.ipc.pidfile import *
 from aspen.tests import assert_logs, assert_raises, set_log_filter
-from aspen.tests.fsfix import attach_teardown, mk
+from aspen.tests.fsfix import attach_teardown, mk, teardown
 from nose import SkipTest
 
 
@@ -96,6 +96,15 @@ def test_remove():
 # Get PID
 # =======
 
+class YieldedAssertRaises:
+    # http://somethingaboutorange.com/mrl/projects/nose/0.11.2/writing_tests.html#test-generators
+    def teardown(self):
+        teardown()
+    def __call__(self, *a, **kw):
+        return assert_raises(*a, **kw)
+yielded_assert_raises = YieldedAssertRaises()
+
+
 def test_getpid(): # another cheap dot :^)
     pid = os.getpid()
     mk(('pidfile', str(pid)))
@@ -112,40 +121,40 @@ def test_getpid_path_not_set():
 def test_getpid_missing():
     for exc in (PIDFileMissing, StaleState):
         pidfile = TestPIDFile()
-        yield assert_raises, exc, pidfile.getpid
+        yield yielded_assert_raises, exc, pidfile.getpid
 
 def test_getpid_restricted():
     for exc in (PIDFileRestricted, ErrorState):
         mk(('pidfile', str(os.getpid())))
         pidfile = TestPIDFile()
         os.chmod(pidfile.path, 0000)
-        yield assert_raises, exc, pidfile.getpid
+        yield yielded_assert_raises, exc, pidfile.getpid
 
 
 def test_getpid_empty():
     for exc in (PIDFileEmpty, ErrorState):
         mk(('pidfile', ''))
         pidfile = TestPIDFile()
-        yield assert_raises, exc, pidfile.getpid
+        yield yielded_assert_raises, exc, pidfile.getpid
 
 def test_getpid_mangled():
     for exc in (PIDFileMangled, ErrorState):
         mk(('pidfile', 'foo'))
         pidfile = TestPIDFile()
-        yield assert_raises, exc, pidfile.getpid
+        yield yielded_assert_raises, exc, pidfile.getpid
 
 def test_getpid_mangled_newline():
     for exc in (PIDFileMangled, ErrorState):
         mk(('pidfile', str(os.getpid)+'\n'))
         pidfile = TestPIDFile()
-        yield assert_raises, exc, pidfile.getpid
+        yield yielded_assert_raises, exc, pidfile.getpid
 
 
 def test_getpid_dead():
     for exc in (PIDDead, StaleState):
         mk(('pidfile', '99999')) # yes, this could fail
         pidfile = TestPIDFile()
-        yield assert_raises, exc, pidfile.getpid
+        yield yielded_assert_raises, exc, pidfile.getpid
 
 def test_getpid_not_aspen():
     for exc in (PIDNotAspen, StaleState):
@@ -153,7 +162,7 @@ def test_getpid_not_aspen():
         mk(('pidfile', str(pid)))
         pidfile = TestPIDFile()
         pidfile.ASPEN = 'flahflah'
-        yield assert_raises, exc, pidfile.getpid
+        yield yielded_assert_raises, exc, pidfile.getpid
 
 
 attach_teardown(globals())

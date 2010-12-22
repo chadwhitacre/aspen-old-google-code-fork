@@ -5,7 +5,7 @@ import sys
 import aspen
 import webob
 from aspen import mode
-from aspen.handlers import autoindex, simplates
+from aspen.handlers import autoindex, http, simplates 
 from aspen.exceptions import HandlerError
 from aspen.utils import check_trailing_slash, find_default, translate
 from jinja2 import Environment, FileSystemLoader
@@ -37,17 +37,13 @@ class Website(object):
         # Translate the request to the filesystem.
         # ========================================
 
-        def http404():
-            start_response('404 Not Found', [])
-            return ['Resource not found.']
-        
         hide = False
         fspath = translate(self.root, environ['PATH_INFO'])
         if self.configuration.paths.__ is not None:
             if fspath.startswith(self.configuration.paths.__):  # magic dir
                 hide = True
         if hide:
-            return http404()
+            return http.HTTP404(environ, start_response)
         environ['PATH_TRANSLATED'] = fspath
         fspath = find_default(self.configuration.defaults, fspath)
         if os.path.isdir(fspath):
@@ -56,7 +52,7 @@ class Website(object):
         if response is not None: # redirect
             return response
         if not os.path.isfile(fspath):
-            return http404()
+            return http.HTTP404(environ, start_response)
 
 
         # Load a simplate.

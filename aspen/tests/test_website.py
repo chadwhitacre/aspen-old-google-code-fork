@@ -6,24 +6,9 @@ from aspen.tests import assert_raises, configure_logging
 from aspen.tests.fsfix import mk, attach_teardown
 from aspen.website import Website
 from aspen.server import Server
-from aspen.load import Handler
 
 
 configure_logging()
-
-
-# Fixture
-# =======
-
-def simple_rule(fp, pred):
-    return True
-
-def simple_wsgi(environ, start_response):
-    start_response('200 OK', [])
-    return ["You hit %s." % environ.get('HTTP_HOST', '_______')]
-
-simple_handler = Handler(rules={'foo':simple_rule}, handle=simple_wsgi)
-simple_handler.add("foo", 0)
 
 
 class TestWebsite(Website):
@@ -77,67 +62,6 @@ def test_hides_magic_dir():
     website = TestWebsite()
     website.check('/__/foo', 'Resource not found.')
 
-def test_hides_README_aspen():
-    mk(('README.aspen', "foo"))
-    website = TestWebsite()
-    website.check('/README.aspen', 'Resource not found.')
-
-
-def test_app_basic():
-    mk('/foo/')
-    website = TestWebsite()
-    website.server.configuration.apps = [('/foo/', simple_wsgi)]
-    website.check('/foo/', 'You hit _______.')
-
-def test_app_no_slash():
-    mk('/foo')
-    website = TestWebsite()
-    website.server.configuration.apps = [('/foo', simple_wsgi)]
-    website.check('/foo/', 'You hit _______.')
-
-def test_app_no_dir():
-    mk()
-    website = TestWebsite()
-    website.server.configuration.apps = [('/foo/', simple_wsgi)]
-    website.check('/foo/', 'Resource not found.')
-
-def test_app_slash_redirected():
-    """check app redirection; should only work when the directory exists
-    """
-    def check(returns, *m):
-        mk(*m)
-        website = TestWebsite()
-        website.server.configuration.apps = [('/foo/', simple_wsgi)]
-        environ = dict(environ_for_trailing_slash)
-        website.check('/foo', returns, **environ)
-    
-    yield check, 'Resource not found.'
-    yield check, 'Resource moved to: http://bar:8080/foo/', 'foo'
-
-
-def test_handler_basic():
-    mk()
-    website = TestWebsite()
-    website.server.configuration.handlers = [simple_handler]
-    website.check('/', 'You hit _______.')
-
-def test_handler_not_found():
-    mk()
-    website = TestWebsite()
-    website.server.configuration.handlers = [simple_handler]
-    website.check('/foo.html', 'Resource not found.')
-
-def test_handler_slash_redirection():
-    mk('/foo/')
-    website = TestWebsite()
-    environ = dict(environ_for_trailing_slash)
-    website.check('/foo', 'Resource moved to: http://bar:8080/foo/', **environ)
-
-def test_handler_default():
-    mk(('/foo/index.html', "bar"))
-    website = TestWebsite()
-    returns = StringIO.StringIO("bar")
-    website.check('/foo/', returns)
 
 
 attach_teardown(globals())

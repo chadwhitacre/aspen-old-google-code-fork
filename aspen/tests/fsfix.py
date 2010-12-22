@@ -122,6 +122,10 @@ def attach_teardown(context, prefix='test_'):
         if name.startswith(prefix):
             func = with_setup(teardown=teardown)(func) # non-destructive
 
+def torndown(func):
+    func.teardown = teardown
+    return func
+
 
 def path(*parts):
     """Given relative path parts, convert to absolute path on the filesystem.
